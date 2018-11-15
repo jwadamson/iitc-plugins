@@ -1,10 +1,10 @@
 // ==UserScript==
-// @id             iitc-plugin-s2-zl@ab
-// @name           IITC plugin: Show Zoom Level S2 Grid
+// @id             iitc-plugin-pogo-s2-zl@ab
+// @name           IITC plugin: Show PoGo S2 Grid
 // @category       Layer
 // @version        0.1.1.20180111.000000
 // @namespace      https://github.com/jonatkins/ingress-intel-total-conversion
-// @description    Drop a Zoom Level S2 Grid on the intel map
+// @description    Drop a PoGo S2 Grid on the intel map
 // @include        https://*.ingress.com/intel*
 // @include        http://*.ingress.com/intel*
 // @match          https://*.ingress.com/intel*
@@ -23,9 +23,9 @@ if(typeof window.plugin !== 'function') window.plugin = function() {};
 var nZoomLocked = 0;
 
 // use own namespace for plugin
-window.plugin.l10s2grid = function() {};
+window.plugin.pogoS2grid = function() {};
 
-window.plugin.l10s2grid.toggle  = function() {
+window.plugin.pogoS2grid.toggle  = function() {
     if (nZoomLocked == 0) {
         nZoomLocked = map.getZoom();
         $("#iitc-plugin-zoomLevel").css("background","Red");
@@ -34,10 +34,10 @@ window.plugin.l10s2grid.toggle  = function() {
         $("#iitc-plugin-zoomLevel").css("background","Yellow");
 
     }
-    window.plugin.l10s2grid.update();
+    window.plugin.pogoS2grid.update();
 };
 
-window.plugin.l10s2grid.setup  = function() {
+window.plugin.pogoS2grid.setup  = function() {
   /// S2 Geometry functions
 // the regional scoreboard is based on a level 6 S2 Cell
 // - https://docs.google.com/presentation/d/1Hl4KapfAENAOf4gv-pSngKwvS_jwNVHRPZTTDzXXn6Q/view?pli=1#slide=id.i22
@@ -71,7 +71,7 @@ $('#updatestatus').append('<div title="Map Zoom Level. \n Click to lock/unlock S
       .prop('type', 'text/css')
       .html('#iitc-plugin-zoomLevel {align:right; height:15px; width:30px; bottom:0; padding:4px; position:fixed; right:0; z-index:3003; background:Yellow; color:#746267};')
       .appendTo('head');
-    $('#iitc-plugin-zoomLevel').click(window.plugin.l10s2grid.toggle);
+    $('#iitc-plugin-zoomLevel').click(window.plugin.pogoS2grid.toggle);
 
     window.addHook('mapDataEntityInject', function() {
       $("#iitc-plugin-zoomLevel").html('z' + map.getZoom());
@@ -363,12 +363,12 @@ S2.S2Cell.prototype.getNeighbors = function() {
 
 
 
-  window.plugin.l10s2grid.regionLayer = L.layerGroup();
+  window.plugin.pogoS2grid.regionLayer = L.layerGroup();
 
 
   $("<style>")
     .prop("type", "text/css")
-    .html(".plugin-l10s2grid-name {\
+    .html(".plugin-pogoS2grid-name {\
              font-size: 14px;\
              font-weight: bold;\
              color: gold;\
@@ -379,15 +379,15 @@ S2.S2Cell.prototype.getNeighbors = function() {
           }")
   .appendTo("head");
 
-  addLayerGroup('S2 Grid', window.plugin.l10s2grid.regionLayer, true);
+  addLayerGroup('S2 Grid', window.plugin.pogoS2grid.regionLayer, true);
 
-  map.on('moveend', window.plugin.l10s2grid.update);
+  map.on('moveend', window.plugin.pogoS2grid.update);
 
-  window.plugin.l10s2grid.update();
+  window.plugin.pogoS2grid.update();
 };
 
 
-window.plugin.l10s2grid.regionName = function(cell) {
+window.plugin.pogoS2grid.regionName = function(cell) {
   var face2name = [ 'AF', 'AS', 'NR', 'PA', 'AM', 'ST' ];
   var codeWord = [
     'ALPHA',
@@ -439,9 +439,9 @@ window.plugin.l10s2grid.regionName = function(cell) {
   return name;
 };
 
-window.plugin.l10s2grid.update = function() {
+window.plugin.pogoS2grid.update = function() {
 
-  window.plugin.l10s2grid.regionLayer.clearLayers();
+  window.plugin.pogoS2grid.regionLayer.clearLayers();
 
   var bounds = map.getBounds();
 
@@ -461,7 +461,7 @@ window.plugin.l10s2grid.update = function() {
 
       if (cellBounds.intersects(bounds)) {
         // on screen - draw it
-        window.plugin.l10s2grid.drawCell(cell);
+        window.plugin.pogoS2grid.drawCell(cell);
 
         // and recurse to our neighbors
         var neighbors = cell.getNeighbors();
@@ -483,10 +483,20 @@ window.plugin.l10s2grid.update = function() {
   }  else {
         cellSize = nZoomLocked;
     }
-  if (zoom >= 5) {
+  var cell;
+  if (zoom >= 5 && false) {
     //var cellSize = zoom>=7 ? 8 : 4;
-    var cell = S2.S2Cell.FromLatLng ( map.getCenter(), cellSize );
-
+    cell = S2.S2Cell.FromLatLng ( map.getCenter(), cellSize );
+    drawCellAndNeighbors(cell);
+  }
+  if (zoom >= 16) {
+      // pokestop cells
+    cell = S2.S2Cell.FromLatLng ( map.getCenter(), 17 );
+    drawCellAndNeighbors(cell);
+  }
+  if (zoom >= 13) {
+      // glym cells
+    cell = S2.S2Cell.FromLatLng ( map.getCenter(), 14 );
     drawCellAndNeighbors(cell);
   }
 
@@ -500,24 +510,24 @@ window.plugin.l10s2grid.update = function() {
     // the geodesic line code can't handle a line/polyline spanning more than (or close to?) 180 degrees, so we draw
     // each segment as a separate line
     var poly1 = L.geodesicPolyline ( [latLngs[i], latLngs[i+1]], globalCellOptions );
-    window.plugin.l10s2grid.regionLayer.addLayer(poly1);
+    window.plugin.pogoS2grid.regionLayer.addLayer(poly1);
 
     //southern mirror of the above
     var poly2 = L.geodesicPolyline ( [[-latLngs[i][0],latLngs[i][1]], [-latLngs[i+1][0], latLngs[i+1][1]]], globalCellOptions );
-    window.plugin.l10s2grid.regionLayer.addLayer(poly2);
+    window.plugin.pogoS2grid.regionLayer.addLayer(poly2);
   }
 
   // and the north-south lines. no need for geodesic here
   for (var i=-135; i<=135; i+=90) {
     var poly = L.polyline ( [[35.264389682754654,i], [-35.264389682754654,i]], globalCellOptions );
-    window.plugin.l10s2grid.regionLayer.addLayer(poly);
+    window.plugin.pogoS2grid.regionLayer.addLayer(poly);
   }
 
 }
 
 
 
-window.plugin.l10s2grid.drawCell = function(cell) {
+window.plugin.pogoS2grid.drawCell = function(cell) {
 
 //TODO: move to function - then call for all cells on screen
 
@@ -528,17 +538,22 @@ window.plugin.l10s2grid.drawCell = function(cell) {
   var center = cell.getLatLng();
 
   // name
-  var name = window.plugin.l10s2grid.regionName(cell);
+  var name = window.plugin.pogoS2grid.regionName(cell);
 
 
-  var color = cell.level == 10 ? 'gold' : 'orange';
+  var color = 'orange';
+  switch (cell.level) {
+      case 10: color = 'gold'; break;
+      case 14: color = 'red'; break;
+      case 17: color = 'yellow'; break;
+  }
 
   // the level 6 cells have noticible errors with non-geodesic lines - and the larger level 4 cells are worse
   // NOTE: we only draw two of the edges. as we draw all cells on screen, the other two edges will either be drawn
   // from the other cell, or be off screen so we don't care
-  var region = L.geodesicPolyline([corners[0],corners[1],corners[2]], {fill: false, color: color, opacity: 0.5, weight: 2, clickable: false });
+  var region = L.geodesicPolyline([corners[0],corners[1],corners[2]], {fill: false, color: color, opacity: 0.9, weight: 2, clickable: false });
 
-  window.plugin.l10s2grid.regionLayer.addLayer(region);
+  window.plugin.pogoS2grid.regionLayer.addLayer(region);
 
 // move the label if we're at a high enough zoom level and it's off screen
 /*  if (map.getZoom() >= 9) {
@@ -559,18 +574,18 @@ window.plugin.l10s2grid.drawCell = function(cell) {
   }
   var marker = L.marker(center, {
     icon: L.divIcon({
-      className: 'plugin-l10s2grid-name',
+      className: 'plugin-pogoS2grid-name',
       iconAnchor: [100,5],
       iconSize: [200,10],
       html: name,
     })
   });
-  window.plugin.l10s2grid.regionLayer.addLayer(marker);
+  window.plugin.pogoS2grid.regionLayer.addLayer(marker);
 */
 };
 
 
-var setup =  window.plugin.l10s2grid.setup;
+var setup =  window.plugin.pogoS2grid.setup;
 
 // PLUGIN END //////////////////////////////////////////////////////////
 
@@ -587,6 +602,7 @@ var info = {};
 if (typeof GM_info !== 'undefined' && GM_info && GM_info.script) info.script = { version: GM_info.script.version, name: GM_info.script.name, description: GM_info.script.description };
 script.appendChild(document.createTextNode('('+ wrapper +')('+JSON.stringify(info)+');'));
 (document.body || document.head || document.documentElement).appendChild(script);
+
 
 
 
